@@ -39,9 +39,13 @@
 
 #include <gtest/gtest.h>
 
+#include <type_traits>
+
+#include <seqan3/alphabet/all.hpp>
 #include <seqan3/align/alignment_graph.hpp>
 
 using namespace seqan3;
+using namespace literal;
 
 template <typename T>
 class align_graph : public ::testing::Test
@@ -51,9 +55,38 @@ class align_graph : public ::testing::Test
 // basics
 // ------------------------------------------------------------------
 
-TEST(align_graph, basic)
+std::vector<rna5_vector> sequences{"ACG"_rna5, "UCG"_rna5, "CCG"_rna5};
+
+TEST(align_graph, constructors)
 {
-    alignment_graph graph{};
-    int j = graph.get_j();
-    EXPECT_EQ(j, 1);
+    using TRandomAccessContainer = std::vector<rna5_vector>;
+    EXPECT_FALSE((std::is_default_constructible_v<alignment_graph<TRandomAccessContainer>>));
+    EXPECT_TRUE((std::is_copy_constructible_v<alignment_graph<TRandomAccessContainer>>));
+    EXPECT_TRUE((std::is_move_constructible_v<alignment_graph<TRandomAccessContainer>>));
+    EXPECT_TRUE((std::is_copy_assignable_v<alignment_graph<TRandomAccessContainer>>));
+    EXPECT_TRUE((std::is_move_assignable_v<alignment_graph<TRandomAccessContainer>>));
+}
+
+TEST(align_graph, input_container)
+{
+    // std::vector<std::vector<rna5>>
+    alignment_graph graph_vv{sequences};
+
+    // std::array of std::vector
+    std::array<dna15_vector, 3> seq_array{"ACG"_dna15, "TCG"_dna15, "CCG"_dna15};
+    alignment_graph graph_av{seq_array};
+
+    // std::array of std::array
+    std::array<std::array<aa27, 10>, 10> seq_array2{};
+    alignment_graph graph_aa{seq_array2};
+
+    // std::deque of std::deque
+    std::deque<std::deque<wuss51>> seq_deque{};
+    alignment_graph graph_dd{seq_deque};
+}
+
+TEST(align_graph, size)
+{
+    alignment_graph graph{sequences};
+    EXPECT_EQ(graph.size(), 9u);
 }
