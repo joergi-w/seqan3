@@ -40,11 +40,21 @@
 
 #pragma once
 
+#include <iomanip>
+
 #include <seqan3/alignment/exception.hpp>
 #include <seqan3/alphabet/gap/all.hpp>
 #include <seqan3/core/metafunction/all.hpp>
+#include <seqan3/io/stream/debug_stream.hpp>
 #include <seqan3/range/container/concept.hpp>
+#include <seqan3/range/view/to_char.hpp>
 #include <seqan3/std/ranges>
+
+#include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/iterator_range.hpp>
+#include <range/v3/view/all.hpp>
+#include <range/v3/view/slice.hpp>
+#include <range/v3/view/zip.hpp>
 
 namespace seqan3
 {
@@ -270,6 +280,95 @@ inline typename seq_type::iterator erase_gap(seq_type & seq, typename seq_type::
 
     return seq.erase(first, last);
 }
+
 //!\}
 
 } // namespace seqan
+
+namespace seqan3::detail
+{
+/*!
+ * Create the formatted alignment output and add it to a stream.
+ * \tparam stream_t Type of the output stream.
+ * \tparam alignment_t Type of the alignment.
+ * \tparam idx Index sequence.
+ * \param stream The output stream that receives the formatted alignment.
+ * \param align The alignment that shall be streamed.
+ */
+template <typename stream_t, typename alignment_t, std::size_t ...idx>
+void stream_alignment(stream_t & stream, alignment_t const & align, std::index_sequence<idx...> const & /**/)
+{
+    std::size_t const alignment_length = std::get<0>(align).size();
+
+    // split alignment into blocks of length 50 and loop over parts
+    for (std::size_t used_length = 0; used_length < alignment_length; used_length += 50)
+    {
+        // write header
+        if (used_length != 0)
+            stream << std::endl;
+
+        stream << std::setw(7) << used_length << ' ';
+        for (std::size_t col = 1; col <= 50 && col + used_length <= alignment_length; ++col)
+        {
+            if (col % 10 == 0)
+                stream << ':';
+            else if (col % 5 == 0)
+                stream << '.';
+            else
+                stream << ' ';
+        }
+
+        // write sequences
+        const char * indent = "        ";
+        stream << std::endl << indent;
+        std::size_t const col_end = std::min(used_length + 50, alignment_length);
+        ranges::for_each(std::get<0>(align) | ranges::view::slice(used_length, col_end) | view::to_char,
+                         [&stream] (char ch) { stream << ch; });
+
+        auto stream_f = [&]
+            (auto const & previous_sequence, auto const & aligned_sequence)
+        {
+            stream << std::endl << indent;
+            auto seq1 = previous_sequence.begin() + used_length;
+            auto seq2 = aligned_sequence.begin() + used_length;
+            for (auto it1 = seq1, it2 = seq2;
+                 it1 < previous_sequence.end() && it1 < seq1 + 50 &&
+                 it2 < aligned_sequence.end()  && it2 < seq2 + 50;
+                 ++it1, ++it2)
+            {
+                stream << (seqan3::to_char(*it1) == seqan3::to_char(*it2) ? '|' : ' ');
+            }
+            stream << std::endl << indent;
+            ranges::for_each(aligned_sequence | ranges::view::slice(used_length, col_end) | view::to_char,
+                             [&stream] (char ch) { stream << ch; });
+        };
+        (stream_f(std::get<idx>(align), std::get<idx + 1>(align)), ...);
+        stream << std::endl;
+    }
+}
+
+} // namespace seqan3::detail
+
+namespace seqan3
+{
+
+//template <aligned_sequence_concept rng_t>
+//debug_stream_type & operator<<(debug_stream_type & stream, rng_t && rng);
+
+template <aligned_sequence_concept ... rng_types>
+debug_stream_type & operator<<(debug_stream_type & stream, rng_types && ... ranges)
+{
+    static_assert(sizeof...(rng_types) >= 2, "An alignment requires at least two sequences.");
+    detail::stream_alignment(stream, ranges, std::make_index_sequence<sizeof...(rng_types) - 1> {});
+    return stream;
+}
+//
+//template <tuple_concept t>
+////requires all element_types are aligned_seuence_concept
+//debug_stream_type & operator<<(debug_stream_type & stream, t && tuple);
+//
+//template <input_range_concept rng_t>
+//    requires aligned_sequence_concept<reference_t<rng_t>>
+//debug_stream_type & operator<<(debug_stream_type & stream, rng_t && rng);
+
+}
