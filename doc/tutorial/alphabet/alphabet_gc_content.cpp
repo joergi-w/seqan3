@@ -22,7 +22,7 @@ int main (int argc, char * argv[])
     if (argc != 2)
     {
         std::cerr << "Usage: " << argv[0] << " <sequence>" << std::endl;
-        return 1;
+        return 0;
     }
 
     // Get the length of the input.

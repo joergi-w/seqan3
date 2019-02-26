@@ -81,6 +81,33 @@ However, through the concept it is guaranteed that a global seqan3::alphabet_siz
 
 ---
 
+# Containers over alphabets
+
+In SeqAn you can use the STL containers to model e.g. sequences, sets or mappings with our alphabets.
+For sequences we recommend the std::vector with one of SeqAn's alphabet types. Instead of building a map from
+characters with logarithmic access times, the rank representation can be used straight as an array index
+with constant access time. In the following exercise you can practise the use of alphabet containers together
+with the previously discussed functions.
+
+\assignment{Excercise: GC content of a sequence}
+An important property of DNA and RNA molecules is the *GC content*,
+which is the percentage of nucleobases that are either Guanine or Cytosine.
+Given the nucleotide counts \f$n_A\f$, \f$n_T\f$, \f$n_G\f$, \f$n_C\f$ the GC content \f$c\f$ is calculated as
+\f[ c = \frac{n_G + n_C}{n_A + n_T + n_G + n_C} \f]
+Write a program that
+1. reads a sequence as command line argument into a vector of seqan3::dna4,
+2. fails for incorrect characters in the sequence,
+3. counts the number of occurrences for each nucleotide and
+4. calculates the GC content.
+\endassignment
+\solution
+\snippet alphabet_gc_content.cpp exercise
+\endsolution
+
+<br/>
+
+---
+
 # The Alphabet and NucleotideAlphabet concepts
 
 Concepts are compile-time constraints for template parameters. They are boolean predicates that limit the
@@ -126,33 +153,6 @@ A more general concept in SeqAn is seqan3::Alphabet. It ensures for all alphabet
 \note Of course, the seqan3::NucleotideAlphabet satisfies seqan3::Alphabet. <br/>
       It actually extends the alphabet concept with the [complement()](\ref seqan3::NucleotideAlphabet::complement)
       function.
-
-<br/>
-
----
-
-# Containers over alphabets
-
-In SeqAn you can use the STL containers to model e.g. sequences, sets or mappings with our alphabets.
-For sequences we recommend the std::vector with one of SeqAn's alphabet types. Instead of building a map from
-characters with logarithmic access times, the rank representation can be used straight as an array index
-with constant access time. In the following exercise you can practise the use of alphabet containers together
-with the previously discussed functions.
-
-\assignment{Excercise: GC content of a sequence}
-An important property of DNA and RNA molecules is the *GC content*,
-which is the percentage of nucleobases that are either Guanine or Cytosine.
-Given the nucleotide counts \f$n_A\f$, \f$n_T\f$, \f$n_G\f$, \f$n_C\f$ the GC content \f$c\f$ is calculated as
-\f[ c = \frac{n_G + n_C}{n_A + n_T + n_G + n_C} \f]
-Write a program that
-1. reads a sequence as command line argument into a vector of seqan3::dna4,
-2. fails for incorrect characters in the sequence,
-3. counts the number of occurrences for each nucleotide and
-4. calculates the GC content.
-\endassignment
-\solution
-\snippet alphabet_gc_content.cpp exercise
-\endsolution
 
 <br/>
 
