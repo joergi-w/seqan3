@@ -93,16 +93,12 @@ dna2 assign_char_strict (dna2 && alph, seqan3::underlying_char<dna2>::type const
     return std::move(alph);
 }
 
-
-
-
 // Concept checks.
 static_assert(std::Regular<dna2>);
 static_assert(std::StrictTotallyOrdered<dna2>);
-static_assert(seqan3::Semialphabet<dna2>);
-//static_assert(seqan3::Alphabet<dna2>);
 
-// Constrained function that works only for seqan3::Alphabet types.
+// Constrained function that works only for seqan3::Semialphabet types.
+// TODO: Require seqan3::alphabet, when overload of char_is_valid_for is possible!
 template <typename alph_type>
     requires seqan3::Semialphabet<alph_type>
 void test_function(alph_type)
