@@ -309,19 +309,21 @@ public:
             auto const & scoring_scheme = get<align_cfg::scoring>(cfg).value;
             auto align_ends_cfg = cfg.template value_or<align_cfg::aligned_ends>(free_ends_none);
 
-            // Only use edit distance if ...
-            if (gaps.get_gap_open_score() == 0 &&  // gap open score is not set,
-                !(align_ends_cfg[2] || align_ends_cfg[3]) && // none of the free end gaps are set for second seq,
-                align_ends_cfg[0] == align_ends_cfg[1]) // free ends for leading and trailing gaps are equal in first seq.
+            if constexpr (config_t::template exists<align_cfg::mode<detail::global_alignment_type>>())
             {
-                // TODO: Instead of relying on nucleotide scoring schemes we need to be able to determine the edit distance
-                //       option via the scheme.
-                if constexpr (is_type_specialisation_of_v<remove_cvref_t<decltype(scoring_scheme)>,
-                                                          nucleotide_scoring_scheme>)
+                // Only use edit distance if ...
+                if (gaps.get_gap_open_score() == 0 &&  // gap open score is not set,
+                    !(align_ends_cfg[2] || align_ends_cfg[3]) && // none of the free end gaps are set for second seq,
+                    align_ends_cfg[0] == align_ends_cfg[1]) // free ends for leading and trailing gaps are equal in first seq.
                 {
-                    if ((scoring_scheme.score('A'_dna15, 'A'_dna15) == 0) &&
-                        (scoring_scheme.score('A'_dna15, 'C'_dna15)) == -1)
-                        return configure_edit_distance<function_wrapper_t>(cfg);
+                    // TODO: Instead of relying on nucleotide scoring schemes we need to be able to determine the edit distance
+                    //       option via the scheme.
+                    if constexpr (is_type_specialisation_of_v<remove_cvref_t<decltype(scoring_scheme)>, nucleotide_scoring_scheme>)
+                    {
+                        if ((scoring_scheme.score('A'_dna15, 'A'_dna15) == 0) &&
+                            (scoring_scheme.score('A'_dna15, 'C'_dna15)) == -1)
+                            return configure_edit_distance<function_wrapper_t>(cfg);
+                    }
                 }
             }
 
@@ -478,7 +480,8 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_initial
     // affine gap kernel
     // ----------------------------------------------------------------------------
 
-    using affine_t = typename select_gap_policy<config_t, cell_type>::type;
+    using local_t = std::bool_constant<config_t::template exists<align_cfg::mode<detail::local_alignment_type>>()>;
+    using affine_t = typename select_gap_policy<config_t, cell_type, local_t>::type;
 
     // ----------------------------------------------------------------------------
     // configure initialisation policy
@@ -550,13 +553,15 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
     auto align_ends_cfg = cfg.template value_or<align_cfg::aligned_ends>(free_ends_none);
     using align_ends_cfg_t = decltype(align_ends_cfg);
 
+    using local_t = std::bool_constant<config_t::template exists<align_cfg::mode<detail::local_alignment_type>>()>;
+
     // This lambda augments the find optimum policy of the alignment algorithm with the
     // respective aligned_ends configuration.
     auto configure_trailing_both = [&](auto first_seq, auto second_seq) constexpr
     {
         struct policy_trait_type
         {
-            using find_in_every_cell_type  [[maybe_unused]] = std::false_type;
+            using find_in_every_cell_type  [[maybe_unused]] = local_t;
             using find_in_last_row_type    [[maybe_unused]] = decltype(first_seq);
             using find_in_last_column_type [[maybe_unused]] = decltype(second_seq);
         };
@@ -570,7 +575,11 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
     auto configure_trailing_second = [&](auto first) constexpr
     {
         // If possible use static information.
-        if constexpr (align_ends_cfg_t::template is_static<3>())
+        if constexpr (local_t::value)
+        {
+            return configure_trailing_both(first, std::true_type{});
+        }
+        else if constexpr (align_ends_cfg_t::template is_static<3>())
         {
             return configure_trailing_both(first,
                                            std::integral_constant<bool, align_ends_cfg_t::template get_static<3>()>{});
@@ -587,7 +596,11 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
     // Here the lookup configuration for the first sequence is determined given
     // the trailing gap property for it.
     // If possible use static information.
-    if constexpr (align_ends_cfg_t::template is_static<1>())
+    if constexpr (local_t::value)
+    {
+        return configure_trailing_second(std::true_type{});
+    }
+    else if constexpr (align_ends_cfg_t::template is_static<1>())
     {
         return configure_trailing_second(std::integral_constant<bool, align_ends_cfg_t::template get_static<1>()>{});
     }

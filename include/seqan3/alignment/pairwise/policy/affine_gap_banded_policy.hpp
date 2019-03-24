@@ -32,13 +32,15 @@ namespace seqan3::detail
  * \tparam derived_type   The derived alignment algorithm.
  * \tparam cell_type      The cell type of the dynamic programming matrix.
  */
-template <typename derived_type, typename cell_type>
-class affine_gap_banded_policy : public affine_gap_policy<affine_gap_banded_policy<derived_type, cell_type>, cell_type>
+template <typename derived_type, typename cell_type, typename align_local_t = std::false_type>
+class affine_gap_banded_policy : public affine_gap_policy<affine_gap_banded_policy<derived_type, cell_type,
+                                        align_local_t>, cell_type, align_local_t>
 {
 private:
 
     //!\brief The type of the base.
-    using base_t = affine_gap_policy<affine_gap_banded_policy<derived_type, cell_type>, cell_type>;
+    using base_t = affine_gap_policy<affine_gap_banded_policy<derived_type, cell_type, align_local_t>,
+                                     cell_type, align_local_t>;
 
     //!\brief Befriend the derived type.
     friend derived_type;

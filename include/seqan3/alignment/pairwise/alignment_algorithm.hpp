@@ -524,7 +524,7 @@ private:
 
         auto fill_aligned_sequence = [](auto & aligned_sequence, auto & gap_segments, size_t const normalise)
         {
-            assert(normalise <= gap_segments[0].position);
+            assert(std::ranges::empty(gap_segments) || normalise <= gap_segments[0].position);
 
             size_t offset = 0;
             for (auto const & gap_elem : gap_segments)
