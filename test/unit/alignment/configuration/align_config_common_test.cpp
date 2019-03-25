@@ -50,7 +50,7 @@ TEST(alignment_configuration_test, symmetric_configuration)
 TEST(alignment_configuration_test, number_of_configs)
 {
     // NOTE(rrahn): You must update this test if you add a new value to align_cfg::id
-    EXPECT_EQ(static_cast<uint8_t>(detail::align_config_id::SIZE), 7);
+    EXPECT_EQ(static_cast<uint8_t>(detail::align_config_id::SIZE), 8);
 }
 
 TYPED_TEST(alignment_configuration_test, ConfigElement)
