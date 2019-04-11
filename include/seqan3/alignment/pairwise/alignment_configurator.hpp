@@ -507,38 +507,46 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_initial
         return configure_free_ends_optimum_search<function_wrapper_t, affine_t, dp_matrix_t, init_t>(cfg);
     };
 
-    // This lambda determines the initialisation configuration for the second sequence given
-    // the leading gap property for it.
-    auto configure_leading_second = [&](auto first) constexpr
+    if constexpr (local_t::value)
     {
-        // If possible use static information.
-        if constexpr (align_ends_cfg_t::template is_static<2>())
-        {
-            return configure_leading_both(first,
-                                          std::integral_constant<bool, align_ends_cfg_t::template get_static<2>()>{});
-        }
-        else
-        {   // Resolve correct property at runtime.
-            if (align_ends_cfg[2])
-                return configure_leading_both(first, std::true_type{});
-            else
-                return configure_leading_both(first, std::false_type{});
-        }
-    };
-
-    // Here the initialisation configuration for the first sequence is determined given
-    // the leading gap property for it.
-    // If possible use static information.
-    if constexpr (align_ends_cfg_t::template is_static<0>())
-    {
-        return configure_leading_second(std::integral_constant<bool, align_ends_cfg_t::template get_static<0>()>{});
+        return configure_leading_both(std::true_type{}, std::true_type{});
     }
     else
-    {  // Resolve correct property at runtime.
-        if (align_ends_cfg[0])
-            return configure_leading_second(std::true_type{});
+    {
+        // This lambda determines the initialisation configuration for the second sequence given
+        // the leading gap property for it.
+        auto configure_leading_second = [&](auto first) constexpr
+        {
+            // If possible use static information.
+            if constexpr (align_ends_cfg_t::template is_static<2>())
+            {
+                return configure_leading_both(first,
+                                              std::integral_constant<bool,
+                                                                     align_ends_cfg_t::template get_static<2>()>{});
+            }
+            else
+            {   // Resolve correct property at runtime.
+                if (align_ends_cfg[2])
+                    return configure_leading_both(first, std::true_type{});
+                else
+                    return configure_leading_both(first, std::false_type{});
+            }
+        };
+
+        // Here the initialisation configuration for the first sequence is determined given
+        // the leading gap property for it.
+        // If possible use static information.
+        if constexpr (align_ends_cfg_t::template is_static<0>())
+        {
+            return configure_leading_second(std::integral_constant<bool, align_ends_cfg_t::template get_static<0>()>{});
+        }
         else
-            return configure_leading_second(std::false_type{});
+        {  // Resolve correct property at runtime.
+            if (align_ends_cfg[0])
+                return configure_leading_second(std::true_type{});
+            else
+                return configure_leading_second(std::false_type{});
+        }
     }
 }
 //!\endcond
@@ -570,46 +578,47 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
         return function_wrapper_t{alignment_algorithm<config_t, policies_t..., find_optimum_t>{cfg}};
     };
 
-    // This lambda determines the lookup configuration for the second sequence given
-    // the trailing gap property for it.
-    auto configure_trailing_second = [&](auto first) constexpr
+    if constexpr (local_t::value)
     {
+        return configure_trailing_both(std::true_type{}, std::true_type{});
+    }
+    else
+    {
+        // This lambda determines the lookup configuration for the second sequence given
+        // the trailing gap property for it.
+        auto configure_trailing_second = [&](auto first) constexpr
+        {
+            // If possible use static information.
+            if constexpr (align_ends_cfg_t::template is_static<3>())
+            {
+                return configure_trailing_both(first,
+                                               std::integral_constant<bool,
+                                                                      align_ends_cfg_t::template get_static<3>()>{});
+            }
+            else
+            { // Resolve correct property at runtime.
+                if (align_ends_cfg[3])
+                    return configure_trailing_both(first, std::true_type{});
+                else
+                    return configure_trailing_both(first, std::false_type{});
+            }
+        };
+
+        // Here the lookup configuration for the first sequence is determined given
+        // the trailing gap property for it.
         // If possible use static information.
-        if constexpr (local_t::value)
+        if constexpr (align_ends_cfg_t::template is_static<1>())
         {
-            return configure_trailing_both(first, std::true_type{});
-        }
-        else if constexpr (align_ends_cfg_t::template is_static<3>())
-        {
-            return configure_trailing_both(first,
-                                           std::integral_constant<bool, align_ends_cfg_t::template get_static<3>()>{});
+            return configure_trailing_second(std::integral_constant<bool,
+                                                                    align_ends_cfg_t::template get_static<1>()>{});
         }
         else
         { // Resolve correct property at runtime.
-            if (align_ends_cfg[3])
-                return configure_trailing_both(first, std::true_type{});
+            if (align_ends_cfg[1])
+                return configure_trailing_second(std::true_type{});
             else
-                return configure_trailing_both(first, std::false_type{});
+                return configure_trailing_second(std::false_type{});
         }
-    };
-
-    // Here the lookup configuration for the first sequence is determined given
-    // the trailing gap property for it.
-    // If possible use static information.
-    if constexpr (local_t::value)
-    {
-        return configure_trailing_second(std::true_type{});
-    }
-    else if constexpr (align_ends_cfg_t::template is_static<1>())
-    {
-        return configure_trailing_second(std::integral_constant<bool, align_ends_cfg_t::template get_static<1>()>{});
-    }
-    else
-    { // Resolve correct property at runtime.
-        if (align_ends_cfg[1])
-            return configure_trailing_second(std::true_type{});
-        else
-            return configure_trailing_second(std::false_type{});
     }
 }
 //!\endcond

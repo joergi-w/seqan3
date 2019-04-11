@@ -18,6 +18,8 @@
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 
+#include <seqan3/test/pretty_printing.hpp>
+
 #include "alignment_fixture.hpp"
 
 namespace seqan3::test::alignment::fixture::local::affine::unbanded
@@ -26,6 +28,7 @@ namespace seqan3::test::alignment::fixture::local::affine::unbanded
 inline constexpr auto align_config = align_cfg::mode{local_alignment} |
                                      align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-10}}};
 
+// Local alignment with mismatch.
 static auto dna4_01 = []()
 {
     using detail::column_index_type;
@@ -49,6 +52,7 @@ static auto dna4_01 = []()
     };
 }();
 
+// The same alignment with sequences swapped.
 static auto dna4_02 = []()
 {
     using detail::column_index_type;
@@ -64,6 +68,104 @@ static auto dna4_02 = []()
         "GTTTA",
         alignment_coordinate{column_index_type{2u}, row_index_type{5u}},
         alignment_coordinate{column_index_type{7u}, row_index_type{10u}}
+    };
+}();
+
+// Local alignment starting in the first row. Verifies that free end gaps are performed correctly.
+// The position of the gap is different compared to SeqAn2.
+static auto dna4_03 = []()
+{
+    using detail::column_index_type;
+    using detail::row_index_type;
+
+    return alignment_fixture
+    {
+        "ataagcgtctcg"_dna4,
+        "tcatagagttgc"_dna4,
+        align_cfg::mode{local_alignment}
+            | align_cfg::gap{gap_scheme{gap_score{-2}, gap_open_score{0}}}
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{2}, mismatch_score{-1}}},
+        9,
+        "ATAAGCGT",
+        "AT-AGAGT", // SeqAn2 has ATA-GAGT
+        alignment_coordinate{column_index_type{0u}, row_index_type{2u}},
+        alignment_coordinate{column_index_type{8u}, row_index_type{9u}}
+    };
+}();
+
+// Only mismatches, so an empty alignment is found (score 0).
+static auto dna4_04 = []()
+{
+    using detail::column_index_type;
+    using detail::row_index_type;
+
+    return alignment_fixture
+    {
+        "AAAAAA"_dna4,
+        "CCCCCC"_dna4,
+        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
+        0,
+        "",
+        "",
+        alignment_coordinate{column_index_type{0u}, row_index_type{6u}},
+        alignment_coordinate{column_index_type{0u}, row_index_type{6u}}
+    };
+}();
+
+// Local alignment in the begin and end of sequences.
+static auto dna4_05 = []()
+{
+    using detail::column_index_type;
+    using detail::row_index_type;
+
+    return alignment_fixture
+    {
+        "AAAAAATCCCCCC"_dna4,
+        "CCCCCCTAAAAAA"_dna4,
+        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
+        24,
+        "AAAAAA",
+        "AAAAAA",
+        alignment_coordinate{column_index_type{0u}, row_index_type{7u}},
+        alignment_coordinate{column_index_type{6u}, row_index_type{13u}}
+    };
+}();
+
+// Local alignment for proteins (amino acid sequence) with BLOSUM62 score.
+static auto aa27_01 = []()
+{
+    using detail::column_index_type;
+    using detail::row_index_type;
+
+    return alignment_fixture
+    {
+        "ALIGATOR"_aa27,
+        "GALORA"_aa27,
+        align_config | align_cfg::scoring{aminoacid_scoring_scheme{aminoacid_similarity_matrix::BLOSUM62}},
+        13,
+        "GATOR",
+        "GALOR",
+        alignment_coordinate{column_index_type{3u}, row_index_type{0u}},
+        alignment_coordinate{column_index_type{8u}, row_index_type{5u}}
+    };
+}();
+
+// Local alignment with empty sequence.
+static auto aa27_02 = []()
+{
+    using detail::column_index_type;
+    using detail::row_index_type;
+
+    return alignment_fixture
+    {
+        "ALIGATOR"_aa27,
+        ""_aa27,
+        align_config | align_cfg::scoring{aminoacid_scoring_scheme{aminoacid_similarity_matrix::BLOSUM62}},
+        0,
+        "",
+        "",
+        alignment_coordinate{column_index_type{0u}, row_index_type{0u}},
+        alignment_coordinate{column_index_type{0u}, row_index_type{0u}}
     };
 }();
 

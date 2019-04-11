@@ -17,54 +17,21 @@
 #include <seqan3/alphabet/aminoacid/aa20.hpp>
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 
-#if __has_include(<seqan/align.h>)
-    #define SEQAN3_HAS_SEQAN2 1
-#endif
+#include <seqan3/test/performance/units.hpp>
+#include <seqan3/test/performance/sequence_generator.hpp>
+#include <seqan3/test/seqan2.hpp>
+#include <seqan3/std/ranges>
 
 #ifdef SEQAN3_HAS_SEQAN2
     #include <seqan/align.h>
-    #include <seqan/basic.h>
-    #include <seqan/sequence.h>
 #endif
 
 using namespace seqan3;
+using namespace seqan3::test;
 
-template <typename alphabet_t>
-auto generate_sequence_seqan3(size_t const len = 500,
-                              size_t const variance = 0,
-                              size_t const seed = 0)
-{
-    std::mt19937 gen(seed);
-    std::uniform_int_distribution<uint8_t> dis_alpha(0, alphabet_size_v<alphabet_t> - 1);
-    std::uniform_int_distribution<size_t> dis_length(len - variance, len + variance);
-
-    std::vector<alphabet_t> sequence;
-
-    size_t length = dis_length(gen);
-    for (size_t l = 0; l < length; ++l)
-        sequence.push_back(alphabet_t{}.assign_rank(dis_alpha(gen)));
-
-    return sequence;
-}
-
-#ifdef SEQAN3_HAS_SEQAN2
-template <typename alphabet_t>
-auto generate_sequence_seqan2(size_t const len = 500,
-                              size_t const variance = 0,
-                              size_t const seed = 0)
-{
-    std::mt19937 gen(seed);
-    std::uniform_int_distribution<uint8_t> dis_alpha(0, seqan::ValueSize<alphabet_t>::VALUE - 1);
-    std::uniform_int_distribution<size_t> dis_length(len - variance, len + variance);
-
-    seqan::String<alphabet_t> sequence;
-    size_t length = dis_length(gen);
-    for (size_t l = 0; l < length; ++l)
-        appendValue(sequence, alphabet_t{dis_alpha(gen)});
-
-    return sequence;
-}
-#endif // generate seqan2 data.
+constexpr auto local_affine_cfg = align_cfg::mode{local_alignment} |
+                                  align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-10}}} |
+                                  align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}};
 
 // ============================================================================
 //  affine; score; dna4; single
@@ -72,19 +39,17 @@ auto generate_sequence_seqan2(size_t const len = 500,
 
 void seqan3_affine_dna4(benchmark::State & state)
 {
-    auto cfg = align_cfg::mode{local_alignment} |
-               align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-10}}} |
-               align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}} |
-               align_cfg::result{with_score};
-
-    auto seq1 = generate_sequence_seqan3<seqan3::dna4>(500, 0, 0);
-    auto seq2 = generate_sequence_seqan3<seqan3::dna4>(500, 0, 1);
+    auto seq1 = generate_sequence<seqan3::dna4>(500, 0, 0);
+    auto seq2 = generate_sequence<seqan3::dna4>(250, 0, 1);
 
     for (auto _ : state)
     {
-        auto rng = align_pairwise(std::tie(seq1, seq2), cfg);
+        auto rng = align_pairwise(std::tie(seq1, seq2), local_affine_cfg | align_cfg::result{with_score});
         *seqan3::begin(rng);
     }
+
+    state.counters["cells"] = pairwise_cell_updates(ranges::view::single(std::tie(seq1, seq2)), local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan3_affine_dna4);
@@ -94,13 +59,16 @@ BENCHMARK(seqan3_affine_dna4);
 void seqan2_affine_dna4(benchmark::State & state)
 {
     auto seq1 = generate_sequence_seqan2<seqan::Dna>(500, 0, 0);
-    auto seq2 = generate_sequence_seqan2<seqan::Dna>(500, 0, 1);
+    auto seq2 = generate_sequence_seqan2<seqan::Dna>(250, 0, 1);
 
     for (auto _ : state)
     {
         // In SeqAn2 the gap open contains already the gap extension costs, that's why we use -11 here.
         seqan::localAlignmentScore(seq1, seq2, seqan::Score<int>{4, -5, -1, -11});
     }
+
+    state.counters["cells"] = pairwise_cell_updates(ranges::view::single(std::tie(seq1, seq2)), local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan2_affine_dna4);
@@ -112,19 +80,17 @@ BENCHMARK(seqan2_affine_dna4);
 
 void seqan3_affine_dna4_trace(benchmark::State & state)
 {
-    auto cfg = align_cfg::mode{local_alignment} |
-               align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-10}}} |
-               align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}} |
-               align_cfg::result{with_alignment};
-
-    auto seq1 = generate_sequence_seqan3<seqan3::dna4>(500, 0, 0);
-    auto seq2 = generate_sequence_seqan3<seqan3::dna4>(500, 0, 1);
+    auto seq1 = generate_sequence<seqan3::dna4>(500, 0, 0);
+    auto seq2 = generate_sequence<seqan3::dna4>(250, 0, 1);
 
     for (auto _ : state)
     {
-        auto rng = align_pairwise(std::tie(seq1, seq2), cfg);
+        auto rng = align_pairwise(std::tie(seq1, seq2), local_affine_cfg | align_cfg::result{with_alignment});
         *seqan3::begin(rng);
     }
+
+    state.counters["cells"] = pairwise_cell_updates(ranges::view::single(std::tie(seq1, seq2)), local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan3_affine_dna4_trace);
@@ -134,7 +100,7 @@ BENCHMARK(seqan3_affine_dna4_trace);
 void seqan2_affine_dna4_trace(benchmark::State & state)
 {
     auto seq1 = generate_sequence_seqan2<seqan::Dna>(500, 0, 0);
-    auto seq2 = generate_sequence_seqan2<seqan::Dna>(500, 0, 1);
+    auto seq2 = generate_sequence_seqan2<seqan::Dna>(250, 0, 1);
 
     seqan::Gaps<decltype(seq1)> gap1{seq1};
     seqan::Gaps<decltype(seq2)> gap2{seq2};
@@ -143,6 +109,9 @@ void seqan2_affine_dna4_trace(benchmark::State & state)
         // In SeqAn2 the gap open contains already the gap extension costs, that's why we use -11 here.
         seqan::localAlignment(gap1, gap2, seqan::Score<int>{4, -5, -1, -11});
     }
+
+    state.counters["cells"] = pairwise_cell_updates(ranges::view::single(std::tie(seq1, seq2)), local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan2_affine_dna4_trace);
@@ -154,26 +123,24 @@ BENCHMARK(seqan2_affine_dna4_trace);
 
 void seqan3_affine_dna4_collection(benchmark::State & state)
 {
-    auto cfg = align_cfg::mode{local_alignment} |
-               align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-10}}} |
-               align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}} |
-               align_cfg::result{with_score};
-
-    using sequence_t = decltype(generate_sequence_seqan3<seqan3::dna4>());
+    using sequence_t = decltype(generate_sequence<seqan3::dna4>());
 
     std::vector<std::pair<sequence_t, sequence_t>> vec;
     for (unsigned i = 0; i < 100; ++i)
     {
-        sequence_t seq1 = generate_sequence_seqan3<seqan3::dna4>(100, 0, i);
-        sequence_t seq2 = generate_sequence_seqan3<seqan3::dna4>(100, 0, i + 100);
+        sequence_t seq1 = generate_sequence<seqan3::dna4>(100, 0, i);
+        sequence_t seq2 = generate_sequence<seqan3::dna4>(50, 0, i + 100);
         vec.push_back(std::pair{seq1, seq2});
     }
 
     for (auto _ : state)
     {
-        for (auto && rng : align_pairwise(vec, cfg))
+        for (auto && rng : align_pairwise(vec, local_affine_cfg | align_cfg::result{with_score}))
             rng.score();
     }
+
+    state.counters["cells"] = pairwise_cell_updates(vec, local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan3_affine_dna4_collection);
@@ -189,7 +156,7 @@ void seqan2_affine_dna4_collection(benchmark::State & state)
     for (unsigned i = 0; i < 100; ++i)
     {
         sequence_t seq1 = generate_sequence_seqan2<seqan::Dna>(100, 0, i);
-        sequence_t seq2 = generate_sequence_seqan2<seqan::Dna>(100, 0, i + 100);
+        sequence_t seq2 = generate_sequence_seqan2<seqan::Dna>(50, 0, i + 100);
         appendValue(vec1, seq1);
         appendValue(vec2, seq2);
     }
@@ -210,26 +177,24 @@ BENCHMARK(seqan2_affine_dna4_collection);
 
 void seqan3_affine_dna4_trace_collection(benchmark::State & state)
 {
-    auto cfg = align_cfg::mode{local_alignment} |
-               align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-10}}} |
-               align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}} |
-               align_cfg::result{with_alignment};
-
-    using sequence_t = decltype(generate_sequence_seqan3<seqan3::dna4>());
+    using sequence_t = decltype(generate_sequence<seqan3::dna4>());
 
     std::vector<std::pair<sequence_t, sequence_t>> vec;
     for (unsigned i = 0; i < 100; ++i)
     {
-        sequence_t seq1 = generate_sequence_seqan3<seqan3::dna4>(100, 0, i);
-        sequence_t seq2 = generate_sequence_seqan3<seqan3::dna4>(100, 0, i + 100);
+        sequence_t seq1 = generate_sequence<seqan3::dna4>(100, 0, i);
+        sequence_t seq2 = generate_sequence<seqan3::dna4>(50, 0, i + 100);
         vec.push_back(std::pair{seq1, seq2});
     }
 
     for (auto _ : state)
     {
-        for (auto && rng : align_pairwise(vec, cfg))
+        for (auto && rng : align_pairwise(vec, local_affine_cfg | align_cfg::result{with_alignment}))
             rng.score();
     }
+
+    state.counters["cells"] = pairwise_cell_updates(vec, local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan3_affine_dna4_trace_collection);
@@ -245,7 +210,7 @@ void seqan2_affine_dna4_trace_collection(benchmark::State & state)
     for (unsigned i = 0; i < 100; ++i)
     {
         sequence_t seq1 = generate_sequence_seqan2<seqan::Dna>(100, 0, i);
-        sequence_t seq2 = generate_sequence_seqan2<seqan::Dna>(100, 0, i + 100);
+        sequence_t seq2 = generate_sequence_seqan2<seqan::Dna>(50, 0, i + 100);
         appendValue(vec1, seq1);
         appendValue(vec2, seq2);
     }
@@ -265,6 +230,9 @@ void seqan2_affine_dna4_trace_collection(benchmark::State & state)
         // In SeqAn2 the gap open contains already the gap extension costs, that's why we use -11 here.
         seqan::localAlignment(gap1, gap2, seqan::Score<int>{4, -5, -1, -11}, seqan::Gotoh());
     }
+
+    state.counters["cells"] = pairwise_cell_updates(ranges::view::zip(vec1, vec2), local_affine_cfg);
+    state.counters["CUPS"] = cell_updates_per_second(state.counters["cells"]);
 }
 
 BENCHMARK(seqan2_affine_dna4_trace_collection);
