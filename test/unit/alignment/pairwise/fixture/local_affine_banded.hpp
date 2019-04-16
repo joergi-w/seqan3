@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include <seqan3/alignment/configuration/align_config_band.hpp>
 #include <seqan3/alignment/configuration/align_config_mode.hpp>
 #include <seqan3/alignment/configuration/align_config_gap.hpp>
 #include <seqan3/alignment/configuration/align_config_scoring.hpp>
@@ -22,7 +23,7 @@
 
 #include "alignment_fixture.hpp"
 
-namespace seqan3::test::alignment::fixture::local::affine::unbanded
+namespace seqan3::test::alignment::fixture::local::affine::banded
 {
 
 inline constexpr auto align_config = align_cfg::mode{local_alignment} |
@@ -43,7 +44,9 @@ static auto dna4_01 = []()
         // GTCTA
         "AACCGGTTTAACCGGTT"_dna4,
         "ACGTCTACGTA"_dna4,
-        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
+        align_config
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}}
+            | align_cfg::band{static_band{lower_bound{-2}, upper_bound{5}}},
         11,
         "GTTTA",
         "GTCTA",
@@ -52,7 +55,7 @@ static auto dna4_01 = []()
     };
 }();
 
-// The same alignment with sequences swapped.
+// The same alignment with sequences swapped. The asymmetric band leads to a worse result than above.
 static auto dna4_02 = []()
 {
     using detail::column_index_type;
@@ -62,16 +65,18 @@ static auto dna4_02 = []()
     {
         "ACGTCTACGTA"_dna4,
         "AACCGGTTTAACCGGTT"_dna4,
-        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
-        11,
-        "GTCTA",
-        "GTTTA",
-        alignment_coordinate{column_index_type{2u}, row_index_type{5u}},
-        alignment_coordinate{column_index_type{7u}, row_index_type{10u}}
+        align_config
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}}
+            | align_cfg::band{static_band{lower_bound{-2}, upper_bound{5}}},
+        8,
+        "AC",
+        "AC",
+        alignment_coordinate{column_index_type{0u}, row_index_type{1u}},
+        alignment_coordinate{column_index_type{2u}, row_index_type{3u}}
     };
 }();
 
-// Local alignment starting in the first row. Verifies that free end gaps are performed correctly.
+// Local alignment with zero bandwidth. Does not allow any gaps.
 static auto dna4_03 = []()
 {
     using detail::column_index_type;
@@ -80,15 +85,16 @@ static auto dna4_03 = []()
     return alignment_fixture
     {
         "ataagcgtctcg"_dna4,
-        "tcatagagttgc"_dna4,
+        "ctcagagttgc"_dna4,
         align_cfg::mode{local_alignment}
-            | align_cfg::gap{gap_scheme{gap_score{-1}, gap_open_score{-1}}}
-            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{2}, mismatch_score{-1}}},
-        9,
-        "ATAAGCGT",
-        "AT-AGAGT",
-        alignment_coordinate{column_index_type{0u}, row_index_type{2u}},
-        alignment_coordinate{column_index_type{8u}, row_index_type{9u}}
+            | align_cfg::gap{gap_scheme{gap_score{0}, gap_open_score{0}}}
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{2}, mismatch_score{-1}}}
+            | align_cfg::band{static_band{lower_bound{0}, upper_bound{0}}},
+        8,
+        "TAAGCGT",
+        "TCAGAGT",
+        alignment_coordinate{column_index_type{1u}, row_index_type{1u}},
+        alignment_coordinate{column_index_type{8u}, row_index_type{8u}}
     };
 }();
 
@@ -102,16 +108,18 @@ static auto dna4_04 = []()
     {
         "AAAAAA"_dna4,
         "CCCCCC"_dna4,
-        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
+        align_config
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}}
+            | align_cfg::band{static_band{lower_bound{-2}, upper_bound{2}}},
         0,
         "",
         "",
-        alignment_coordinate{column_index_type{0u}, row_index_type{6u}}, // in SeqAn2 both coordinates are (0,0)
-        alignment_coordinate{column_index_type{0u}, row_index_type{6u}}
+        alignment_coordinate{column_index_type{0u}, row_index_type{2u}}, // in SeqAn2 both coordinates are (0,0)
+        alignment_coordinate{column_index_type{0u}, row_index_type{2u}}  // here coordinates are dependent on band width
     };
 }();
 
-// Local alignment in the begin and end of sequences.
+// Local alignment in the begin and end of sequences. The band covers the lower diagonal matrix.
 static auto dna4_05 = []()
 {
     using detail::column_index_type;
@@ -121,7 +129,9 @@ static auto dna4_05 = []()
     {
         "AAAAAATCCCCCC"_dna4,
         "CCCCCCTAAAAAA"_dna4,
-        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
+        align_config
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}}
+            | align_cfg::band{static_band{lower_bound{-100}, upper_bound{0}}},
         24,
         "AAAAAA",
         "AAAAAA",
@@ -130,7 +140,29 @@ static auto dna4_05 = []()
     };
 }();
 
-// Local RNA alignment with a longer sequence of gaps.
+// Local alignment in the begin and end of sequences. The band cover the upper diagonal matrix and
+// enforces to align the C's instead of the A's.
+static auto dna4_06 = []()
+{
+    using detail::column_index_type;
+    using detail::row_index_type;
+
+    return alignment_fixture
+    {
+        "AAAAAATCCCCCC"_dna4,
+        "CCCCCCTAAAAAA"_dna4,
+        align_config
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}}
+            | align_cfg::band{static_band{lower_bound{0}, upper_bound{100}}},
+        24,
+        "CCCCCC",
+        "CCCCCC",
+        alignment_coordinate{column_index_type{7u}, row_index_type{0u}},
+        alignment_coordinate{column_index_type{13u}, row_index_type{6u}}
+    };
+}();
+
+// Local RNA alignment with a longer sequence of gaps. The alignment trace is located along the band boundary.
 static auto rna5_01 = []()
 {
     using detail::column_index_type;
@@ -140,7 +172,9 @@ static auto rna5_01 = []()
     {
         "AAAAAAUUUUNNUUUUCCCCCC"_rna5,
         "AAAAAACCCCCC"_rna5,
-        align_config | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}},
+        align_config
+            | align_cfg::scoring{nucleotide_scoring_scheme{match_score{4}, mismatch_score{-5}}}
+            | align_cfg::band{static_band{lower_bound{-10}, upper_bound{10}}},
         28,
         "AAAAAAUUUUNNUUUUCCCCCC",
         "AAAAAA----------CCCCCC",
@@ -149,7 +183,7 @@ static auto rna5_01 = []()
     };
 }();
 
-// Local alignment for proteins (amino acid sequence) with BLOSUM62 score.
+// Local alignment for proteins (amino acid sequence) with BLOSUM62 score and an extremely wide band.
 static auto aa27_01 = []()
 {
     using detail::column_index_type;
@@ -159,7 +193,9 @@ static auto aa27_01 = []()
     {
         "ALIGATOR"_aa27,
         "GALORA"_aa27,
-        align_config | align_cfg::scoring{aminoacid_scoring_scheme{aminoacid_similarity_matrix::BLOSUM62}},
+        align_config
+            | align_cfg::scoring{aminoacid_scoring_scheme{aminoacid_similarity_matrix::BLOSUM62}}
+            | align_cfg::band{static_band{lower_bound{-10000}, upper_bound{10000}}},
         13,
         "GATOR",
         "GALOR",
@@ -168,23 +204,4 @@ static auto aa27_01 = []()
     };
 }();
 
-// Local alignment with empty sequence.
-static auto aa27_02 = []()
-{
-    using detail::column_index_type;
-    using detail::row_index_type;
-
-    return alignment_fixture
-    {
-        "ALIGATOR"_aa27,
-        ""_aa27,
-        align_config | align_cfg::scoring{aminoacid_scoring_scheme{aminoacid_similarity_matrix::BLOSUM62}},
-        0,
-        "",
-        "",
-        alignment_coordinate{column_index_type{0u}, row_index_type{0u}},
-        alignment_coordinate{column_index_type{0u}, row_index_type{0u}}
-    };
-}();
-
-} // namespace seqan3::test::alignment::fixture::local::affine::unbanded
+} // namespace seqan3::test::alignment::fixture::local::affine::banded

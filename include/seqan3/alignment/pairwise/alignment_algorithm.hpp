@@ -240,16 +240,16 @@ public:
         {
             throw invalid_alignment_configuration
             {
-                "The lower bound is bigger than the size of the first sequence."
+                "Invalid band error: The lower bound excludes the whole alignment matrix."
             };
         }
 
-        if (static_cast<diff_type>(std::abs(band.upper_bound)) >
-            std::ranges::distance(std::ranges::begin(second_range), std::ranges::end(second_range)))
+        if (static_cast<diff_type>(band.upper_bound) <
+            -std::ranges::distance(std::ranges::begin(second_range), std::ranges::end(second_range)))
         {
             throw invalid_alignment_configuration
             {
-                "The upper bound is smaller than the size of the second sequence."
+                "Invalid band error: The upper bound excludes the whole alignment matrix."
             };
         }
 
