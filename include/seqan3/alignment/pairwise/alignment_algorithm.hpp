@@ -235,8 +235,7 @@ public:
         using diff_type = typename std::iterator_traits<std::ranges::iterator_t<first_range_t>>::difference_type;
         static_assert(std::is_signed_v<diff_type>,  "Only signed types can be used to test the band parameters.");
 
-        if (static_cast<diff_type>(band.lower_bound) >
-            std::ranges::distance(std::ranges::begin(first_range), std::ranges::end(first_range)))
+        if (static_cast<diff_type>(band.lower_bound) > std::ranges::distance(first_range))
         {
             throw invalid_alignment_configuration
             {
@@ -244,8 +243,7 @@ public:
             };
         }
 
-        if (static_cast<diff_type>(band.upper_bound) <
-            -std::ranges::distance(std::ranges::begin(second_range), std::ranges::end(second_range)))
+        if (static_cast<diff_type>(band.upper_bound) < -std::ranges::distance(second_range))
         {
             throw invalid_alignment_configuration
             {

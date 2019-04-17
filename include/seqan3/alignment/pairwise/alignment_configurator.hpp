@@ -365,7 +365,7 @@ private:
         auto align_ends_cfg = cfg.template value_or<align_cfg::aligned_ends>(free_ends_none);
         using align_ends_cfg_t = remove_cvref_t<decltype(align_ends_cfg)>;
 
-        auto configure_edit_traits = [&](auto is_semi_global)
+        auto configure_edit_traits = [&] (auto is_semi_global)
         {
             struct edit_traits_type
             {
@@ -377,7 +377,7 @@ private:
         };
 
         // Check if it has free ends set for the first sequence trailing gaps.
-        auto has_free_ends_trailing = [&](auto first) constexpr
+        auto has_free_ends_trailing = [&] (auto first) constexpr
         {
             if constexpr (!decltype(first)::value)
             {
@@ -493,7 +493,7 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_initial
 
     // This lambda augments the initialisation policy of the alignment algorithm
     // with the aligned_ends configuration from before.
-    auto configure_leading_both = [&](auto first_seq, auto second_seq) constexpr
+    auto configure_leading_both = [&] (auto first_seq, auto second_seq) constexpr
     {
         // Define the trait for the initialisation policy
         struct policy_trait_type
@@ -515,14 +515,13 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_initial
     {
         // This lambda determines the initialisation configuration for the second sequence given
         // the leading gap property for it.
-        auto configure_leading_second = [&](auto first) constexpr
+        auto configure_leading_second = [&] (auto first) constexpr
         {
             // If possible use static information.
             if constexpr (align_ends_cfg_t::template is_static<2>())
             {
-                return configure_leading_both(first,
-                                              std::integral_constant<bool,
-                                                                     align_ends_cfg_t::template get_static<2>()>{});
+                using second_t = std::integral_constant<bool, align_ends_cfg_t::template get_static<2>()>;
+                return configure_leading_both(first, second_t{});
             }
             else
             {   // Resolve correct property at runtime.
@@ -538,7 +537,8 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_initial
         // If possible use static information.
         if constexpr (align_ends_cfg_t::template is_static<0>())
         {
-            return configure_leading_second(std::integral_constant<bool, align_ends_cfg_t::template get_static<0>()>{});
+            using first_t = std::integral_constant<bool, align_ends_cfg_t::template get_static<0>()>;
+            return configure_leading_second(first_t{});
         }
         else
         {  // Resolve correct property at runtime.
@@ -565,7 +565,7 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
 
     // This lambda augments the find optimum policy of the alignment algorithm with the
     // respective aligned_ends configuration.
-    auto configure_trailing_both = [&](auto first_seq, auto second_seq) constexpr
+    auto configure_trailing_both = [&] (auto first_seq, auto second_seq) constexpr
     {
         struct policy_trait_type
         {
@@ -586,14 +586,13 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
     {
         // This lambda determines the lookup configuration for the second sequence given
         // the trailing gap property for it.
-        auto configure_trailing_second = [&](auto first) constexpr
+        auto configure_trailing_second = [&] (auto first) constexpr
         {
             // If possible use static information.
             if constexpr (align_ends_cfg_t::template is_static<3>())
             {
-                return configure_trailing_both(first,
-                                               std::integral_constant<bool,
-                                                                      align_ends_cfg_t::template get_static<3>()>{});
+                using second_t = std::integral_constant<bool, align_ends_cfg_t::template get_static<3>()>;
+                return configure_trailing_both(first, second_t{});
             }
             else
             { // Resolve correct property at runtime.
@@ -609,8 +608,8 @@ constexpr function_wrapper_t alignment_configurator::configure_free_ends_optimum
         // If possible use static information.
         if constexpr (align_ends_cfg_t::template is_static<1>())
         {
-            return configure_trailing_second(std::integral_constant<bool,
-                                                                    align_ends_cfg_t::template get_static<1>()>{});
+            using first_t = std::integral_constant<bool, align_ends_cfg_t::template get_static<1>()>;
+            return configure_trailing_second(first_t{});
         }
         else
         { // Resolve correct property at runtime.
