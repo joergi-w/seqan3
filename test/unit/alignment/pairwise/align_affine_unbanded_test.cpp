@@ -13,7 +13,9 @@
 
 #include <seqan3/range/view/to_char.hpp>
 
+#include "fixture/global_affine_unbanded.hpp"
 #include "fixture/local_affine_unbanded.hpp"
+#include "fixture/semi_global_affine_unbanded.hpp"
 
 using namespace seqan3;
 using namespace seqan3::detail;
@@ -29,10 +31,18 @@ struct param : public ::testing::Test
 };
 
 template <typename param_t>
-class local_affine_unbanded : public param_t
+class align_affine_unbanded : public param_t
 {};
 
-TYPED_TEST_CASE_P(local_affine_unbanded);
+TYPED_TEST_CASE_P(align_affine_unbanded);
+
+using global_affine_unbanded_types = ::testing::Types<param<&global::affine::unbanded::dna4_01>,
+                                                      param<&global::affine::unbanded::dna4_02>>;
+
+using semi_global_affine_unbanded_types = ::testing::Types<param<&semi_global::affine::unbanded::dna4_01>,
+                                                           param<&semi_global::affine::unbanded::dna4_02>,
+                                                           param<&semi_global::affine::unbanded::dna4_03>,
+                                                           param<&semi_global::affine::unbanded::dna4_04>>;
 
 using local_affine_unbanded_types = ::testing::Types<param<&local::affine::unbanded::dna4_01>,
                                                      param<&local::affine::unbanded::dna4_02>,
@@ -43,7 +53,7 @@ using local_affine_unbanded_types = ::testing::Types<param<&local::affine::unban
                                                      param<&local::affine::unbanded::aa27_01>,
                                                      param<&local::affine::unbanded::aa27_02>>;
 
-TYPED_TEST_P(local_affine_unbanded, score)
+TYPED_TEST_P(align_affine_unbanded, score)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_score};
@@ -56,7 +66,7 @@ TYPED_TEST_P(local_affine_unbanded, score)
     EXPECT_EQ((*std::ranges::begin(alignment)).score(), fixture.score);
 }
 
-TYPED_TEST_P(local_affine_unbanded, end_position)
+TYPED_TEST_P(align_affine_unbanded, end_position)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_back_coordinate};
@@ -71,7 +81,7 @@ TYPED_TEST_P(local_affine_unbanded, end_position)
     EXPECT_EQ(res.back_coordinate(), fixture.back_coordinate);
 }
 
-TYPED_TEST_P(local_affine_unbanded, begin_position)
+TYPED_TEST_P(align_affine_unbanded, begin_position)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_front_coordinate};
@@ -87,7 +97,7 @@ TYPED_TEST_P(local_affine_unbanded, begin_position)
     EXPECT_EQ(res.back_coordinate(), fixture.back_coordinate);
 }
 
-TYPED_TEST_P(local_affine_unbanded, trace)
+TYPED_TEST_P(align_affine_unbanded, trace)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_alignment};
@@ -105,6 +115,8 @@ TYPED_TEST_P(local_affine_unbanded, trace)
     EXPECT_TRUE(ranges::equal(get<1>(res.alignment()) | view::to_char, fixture.aligned_sequence2));
 }
 
-REGISTER_TYPED_TEST_CASE_P(local_affine_unbanded, score, end_position, begin_position, trace);
+REGISTER_TYPED_TEST_CASE_P(align_affine_unbanded, score, end_position, begin_position, trace);
 
-INSTANTIATE_TYPED_TEST_CASE_P(local, local_affine_unbanded, local_affine_unbanded_types);
+INSTANTIATE_TYPED_TEST_CASE_P(global, align_affine_unbanded, global_affine_unbanded_types);
+INSTANTIATE_TYPED_TEST_CASE_P(local, align_affine_unbanded, local_affine_unbanded_types);
+INSTANTIATE_TYPED_TEST_CASE_P(semi_global, align_affine_unbanded, semi_global_affine_unbanded_types);

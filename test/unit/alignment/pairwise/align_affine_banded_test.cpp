@@ -14,8 +14,9 @@
 
 #include <seqan3/range/view/to_char.hpp>
 
-#include "fixture/global_affine_unbanded.hpp"
-#include "fixture/semi_global_affine_unbanded.hpp"
+#include "fixture/global_affine_banded.hpp"
+#include "fixture/local_affine_banded.hpp"
+#include "fixture/semi_global_affine_banded.hpp"
 
 using namespace seqan3;
 using namespace seqan3::detail;
@@ -31,39 +32,43 @@ struct param : public ::testing::Test
 };
 
 template <typename param_t>
-class global_affine_unbanded : public param_t
+class align_affine_banded : public param_t
 {};
 
-TYPED_TEST_CASE_P(global_affine_unbanded);
+TYPED_TEST_CASE_P(align_affine_banded);
 
-using global_affine_unbanded_types
-    = ::testing::Types<
-        param<&global::affine::unbanded::dna4_01>,
-        param<&global::affine::unbanded::dna4_02>
-    >;
+using global_affine_banded_types= ::testing::Types<param<&global::affine::banded::dna4_01>>;
 
-using semi_global_affine_unbanded_types
-    = ::testing::Types<
-        param<&semi_global::affine::unbanded::dna4_01>,
-        param<&semi_global::affine::unbanded::dna4_02>,
-        param<&semi_global::affine::unbanded::dna4_03>,
-        param<&semi_global::affine::unbanded::dna4_04>
-    >;
+using semi_global_affine_banded_types = ::testing::Types<param<&semi_global::affine::banded::dna4_semi_seq1_a>,
+                                                         //param<&semi_global::affine::banded::dna4_semi_seq1_b>,
+                                                         param<&semi_global::affine::banded::dna4_semi_seq2_a>,
+                                                         param<&semi_global::affine::banded::dna4_semi_seq2_b>>;
 
-TYPED_TEST_P(global_affine_unbanded, score)
+using local_affine_banded_types = ::testing::Types<param<&local::affine::banded::dna4_01>,
+                                                   param<&local::affine::banded::dna4_02>,
+                                                   param<&local::affine::banded::dna4_03>,
+                                                   param<&local::affine::banded::dna4_04>,
+                                                   param<&local::affine::banded::dna4_05>,
+                                                   param<&local::affine::banded::dna4_06>,
+                                                   param<&local::affine::banded::rna5_01>,
+                                                   param<&local::affine::banded::aa27_01>>;
+
+TYPED_TEST_P(align_affine_banded, score)
 {
     auto const & fixture = this->fixture();
+    // We only compute the score.
     auto align_cfg = fixture.config | align_cfg::result{with_score};
 
     std::vector database = fixture.sequence1;
     std::vector query = fixture.sequence2;
 
+    // TODO Make test work with ranges.
     auto alignment = align_pairwise(std::tie(database, query), align_cfg);
 
     EXPECT_EQ((*std::ranges::begin(alignment)).score(), fixture.score);
 }
 
-TYPED_TEST_P(global_affine_unbanded, end_position)
+TYPED_TEST_P(align_affine_banded, end_position)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_back_coordinate};
@@ -75,10 +80,11 @@ TYPED_TEST_P(global_affine_unbanded, end_position)
 
     auto res = *std::ranges::begin(alignment);
     EXPECT_EQ(res.score(), fixture.score);
+
     EXPECT_EQ(res.back_coordinate(), fixture.back_coordinate);
 }
 
-TYPED_TEST_P(global_affine_unbanded, begin_position)
+TYPED_TEST_P(align_affine_banded, begin_position)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_front_coordinate};
@@ -90,11 +96,12 @@ TYPED_TEST_P(global_affine_unbanded, begin_position)
 
     auto res = *std::ranges::begin(alignment);
     EXPECT_EQ(res.score(), fixture.score);
+
     EXPECT_EQ(res.front_coordinate(), fixture.front_coordinate);
     EXPECT_EQ(res.back_coordinate(), fixture.back_coordinate);
 }
 
-TYPED_TEST_P(global_affine_unbanded, trace)
+TYPED_TEST_P(align_affine_banded, trace)
 {
     auto const & fixture = this->fixture();
     auto align_cfg = fixture.config | align_cfg::result{with_alignment};
@@ -112,7 +119,9 @@ TYPED_TEST_P(global_affine_unbanded, trace)
     EXPECT_TRUE(ranges::equal(get<1>(res.alignment()) | view::to_char, fixture.aligned_sequence2));
 }
 
-REGISTER_TYPED_TEST_CASE_P(global_affine_unbanded, score, end_position, begin_position, trace);
+REGISTER_TYPED_TEST_CASE_P(align_affine_banded, score, end_position, begin_position, trace);
 
-INSTANTIATE_TYPED_TEST_CASE_P(global, global_affine_unbanded, global_affine_unbanded_types);
-INSTANTIATE_TYPED_TEST_CASE_P(semi_global, global_affine_unbanded, semi_global_affine_unbanded_types);
+// work around a bug that you can't specify more than 50 template arguments to ::testing::types
+INSTANTIATE_TYPED_TEST_CASE_P(global, align_affine_banded, global_affine_banded_types);
+INSTANTIATE_TYPED_TEST_CASE_P(local, align_affine_banded, local_affine_banded_types);
+INSTANTIATE_TYPED_TEST_CASE_P(semi_global, align_affine_banded, semi_global_affine_banded_types);

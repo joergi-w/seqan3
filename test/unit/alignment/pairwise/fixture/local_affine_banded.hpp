@@ -19,8 +19,6 @@
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/alphabet/nucleotide/rna5.hpp>
 
-#include <seqan3/test/pretty_printing.hpp>
-
 #include "alignment_fixture.hpp"
 
 namespace seqan3::test::alignment::fixture::local::affine::banded
