@@ -39,6 +39,7 @@ Please see the [online documentation](http://docs.seqan.de/seqan/3-master-user/)
 |**optional libs**  | [cereal](https://github.com/USCiLab/cereal)          | ≥ 1.2.3  | required for serialisation and CTD support  |
 |                   | [zlib](https://github.com/madler/zlib)               | ≥ 1.2    | required for `*.gz` and `.bam` file support |
 |                   | [bzip2](http://www.bzip.org)                         | ≥ 1.0    | required for `*.bz2` file support           |
+|                   | [Lemon](http://lemon.cs.elte.hu)                     | ≥ 1.3.1  | graphs, required for multiple alignment     |
 
 ## Usage
 
@@ -62,6 +63,7 @@ g++-7 -O3 -DNDEBUG -Wall -Wextra                                \
     -isystem /path/to/seqan3/submodules/range-v3/include        \
     -isystem /path/to/seqan3/submodules/sdsl-lite/include       \
     -isystem /path/to/seqan3/submodules/cereal/include          \
+    -isystem /path/to/seqan3/submodules/lemon/include           \
     -DSEQAN3_HAS_ZLIB=1 -DSEQAN3_HAS_BZIP2=1                    \
     -lz -lbz2 -lstdc++fs -pthread                               \
   your_file.cpp

@@ -7,3 +7,6 @@
 [submodule "cereal"]
 	path = submodules/cereal
 	url = https://github.com/h-2/cereal
+[submodule "lemon"]
+	path = submodules/lemon
+	url = https://github.com/seqan/lemon
